@@ -1,5 +1,13 @@
+provider "azurerm" {
+  features {}
+}
+
+provider "azuread" {
+
+}
+
 module "resource_group" {
-  source = "github.com/danielscholl/iac-terraform/modules/resource-group"
+  source = "../../resource-group"
 
   name     = "iac-terraform"
   location = "eastus2"
@@ -12,4 +20,13 @@ module "service_principal" {
   role     = "Contributor"
   scopes   = [module.resource_group.id]
   end_date = "1W"
+
+  api_permissions = [
+    {
+      name = "Microsoft Graph"
+      app_roles = [
+        "Directory.Read.All"
+      ]
+    }
+  ]
 }

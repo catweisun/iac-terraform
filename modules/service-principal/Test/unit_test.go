@@ -9,8 +9,8 @@ import (
 	"github.com/microsoft/cobalt/test-harness/infratests"
 )
 
-var name = "adapplication-"
-var count = 3
+var name = "serviceprincipal-"
+var count = 7
 
 var tfOptions = &terraform.Options{
 	TerraformDir: "./",
@@ -52,7 +52,7 @@ func TestTemplate(t *testing.T) {
 		PlanAssertions:        nil,
 		ExpectedResourceCount: count,
 		ExpectedResourceAttributeValues: infratests.ResourceDescription{
-			"module.ad-application.azuread_application.main": expectedResult,
+			"module.service_principal.azuread_application.main[0]": expectedResult,
 		},
 	}
 

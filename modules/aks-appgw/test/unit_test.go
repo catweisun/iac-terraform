@@ -9,8 +9,9 @@ import (
 	"github.com/microsoft/cobalt/test-harness/infratests"
 )
 
-var name = "serviceprincipal-"
-var count = 7
+var name = "cluster-"
+var location = "eastus"
+var count = 15
 
 var tfOptions = &terraform.Options{
 	TerraformDir: "./",
@@ -27,9 +28,21 @@ func asMap(t *testing.T, jsonString string) map[string]interface{} {
 
 func TestTemplate(t *testing.T) {
 
-	expectedResult := asMap(t, `{
-		"available_to_other_tenants": false,
-		"type": "webapp/api"
+	ipExpectedResult := asMap(t, `{
+		"sku": "Standard",
+		"allocation_method": "Static"
+	}`)
+
+	gatewayExpectedResult := asMap(t, `{
+		"autoscale_configuration": [{
+			"min_capacity": 2
+		}],
+		"identity": [{
+			"type": "UserAssigned"
+		}],
+		"request_routing_rule": [{
+			"rule_type": "Basic"
+		}]
 	}`)
 
 	testFixture := infratests.UnitTestFixture{
@@ -39,7 +52,8 @@ func TestTemplate(t *testing.T) {
 		PlanAssertions:        nil,
 		ExpectedResourceCount: count,
 		ExpectedResourceAttributeValues: infratests.ResourceDescription{
-			"module.service_principal.azuread_application.main[0]": expectedResult,
+			"module.appgateway.azurerm_public_ip.main":           ipExpectedResult,
+			"module.appgateway.azurerm_application_gateway.main": gatewayExpectedResult,
 		},
 	}
 
