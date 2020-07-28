@@ -36,6 +36,19 @@ provider "azuread" {
   version = "=0.10.0"
 }
 
+provider "kubectl" {
+  config_path = module.aks.kube_config_path
+}
+
+provider "helm" {
+  kubernetes {
+    config_path = module.aks.kube_config_path
+  }
+}
+provider "kubernetes" {
+    config_path = module.aks.kube_config_path
+}
+
 
 #-------------------------------
 # Application Variables  (variables.tf)
@@ -346,6 +359,24 @@ module "appinsights" {
   resource_group_name = module.resource_group.name  
 }
 
+
+#-------------------------------
+# Azure Pod Identity
+#-------------------------------
+
+#-------------------------------
+# Install aad pod identity
+#-------------------------------
+resource "helm_release" "aad-pod-identity" {
+  name          = "aad-pod-identity"
+  chart         = "aad-pod-identity"
+  namespace     = "kube-system"
+  repository    = "https://raw.githubusercontent.com/Azure/aad-pod-identity/master/charts"
+  depends_on = [kubernetes_namespace.airflow_namespace]
+}
+#-------------------------------
+# setup aad pod identity
+#-------------------------------
 resource "azurerm_user_assigned_identity" "main" {
   name                = local.user_assigned_identity_name
   resource_group_name = data.azurerm_resource_group.aks_node_resource_group.name
@@ -368,7 +399,9 @@ resource "azurerm_role_assignment" "role-usi-aks-vmc" {
   scope = data.azurerm_resource_group.aks_node_resource_group.id
   depends_on = [azurerm_user_assigned_identity.main, module.aks]
 }
-
+#-------------------------------
+# generate aad pod identity deployment YAML
+#-------------------------------
 resource "local_file" "azure_identity_yaml" {
   filename = local.auzre_identity_yaml
   content = templatefile( local.auzre_identity_template_yaml,
@@ -389,74 +422,24 @@ resource "local_file" "azure_identity_binding_yaml" {
               )
 }
 
-resource "local_file" "external_secret_values_yaml" {
-  filename = local.external_secret_values_yaml
-  content = templatefile(local.external_secret_values_template_yaml,
-                {
-                  identity_name = local.user_assigned_identity_name
-                }
-              )
+#-------------------------------
+# deploy aad pod identity and binding
+#-------------------------------
+resource "kubectl_manifest" "identity-manifest" {
+  yaml_body   = local_file.azure_identity_yaml.content
+  depends_on  = [helm_release.aad-pod-identity]
 }
 
-resource "local_file" "osdu_dag_sync_secret_yaml" {
-  filename = local.osdu_dag_sync_secret_yaml
-  content = templatefile(local.osdu_dag_sync_secret_template_yaml,
-                {
-                  airflow_namespace = local.airflow_namespace,
-                  keyvault_name     = local.keyvault_name                 
-                }
-            )
+resource "kubectl_manifest" "identity-binding-manifest" {
+  yaml_body   = local_file.azure_identity_binding_yaml.content
+  depends_on  = [kubectl_manifest.identity-manifest]
 }
 
-resource "local_file" "osdu_airflow_secret_yaml" {
-  filename = local.osdu_airflow_secret_yaml
-  content = templatefile(local.osdu_airflow_secret_template_yaml,
-                {
-                  airflow_namespace = local.airflow_namespace,
-                  keyvault_name     = local.keyvault_name                 
-                }
-            )
-}
 
-resource "local_file" "osdu_az_principal_yaml" {
-  filename = local.osdu_az_principal_yaml
-  content = templatefile(local.osdu_az_principal_template_yaml,
-              {
-                airflow_namespace = local.airflow_namespace,
-                keyvault_name     = local.keyvault_name
-              }
-            )
-}
-resource "local_file" "configmap_airflow_remote_log" {
-  filename = local.configmap_airflow_remote_log_yaml
-  content = templatefile(local.configmap_airflow_remote_log_template_yaml,
-              {
-                  airflow_namespace = local.airflow_namespace,
-                  keyvault_name     = local.keyvault_name
-              }
-            )
-}
 
-resource "local_file" "airflow_helm_values" {
-  filename = local.airflow_helm_values_yaml
-  content = templatefile(local.airflow_helm_values_template_yaml,
-              {
-                  postgresql_host   = module.postgresql.server_fqdn,
-                  postgresql_user   = local.postgresql_login
-                  redis_host        = module.redis.hostname
-              }
-            ) 
-}
 
-resource "local_file" "appinsights_statsd_config" {
-  filename = local.appinsights_statsd_config_js
-  content  = templatefile(local.appinsights_statsd_config_template_js,
-               {
-                  airflow_instance_name = local.airflow_instance_name
-                  appinsights_key       = module.appinsights.instrumentation_key
-               }
-            )
-}
+
+
 
 
 #-------------------------------
@@ -507,30 +490,6 @@ module "redis" {
 
 
 #-------------------------------
-# Install infra service on AKS
-#-------------------------------
-
-provider "helm" {
-  kubernetes {
-    config_path = module.aks.kube_config_path
-  }
-}
-provider "kubernetes" {
-    config_path = module.aks.kube_config_path
-}
-
-#-------------------------------
-# Install aad pod identity
-#-------------------------------
-resource "helm_release" "aad-pod-identity" {
-  name          = "aad-pod-identity"
-  chart         = "aad-pod-identity"
-  namespace     = "kube-system"
-  repository    = "https://raw.githubusercontent.com/Azure/aad-pod-identity/master/charts"
-  depends_on = [kubernetes_namespace.airflow_namespace]
-}
-
-#-------------------------------
 # Install external secrets
 #-------------------------------
 
@@ -554,6 +513,101 @@ resource "helm_release" "external-secrets" {
   }
   depends_on = [kubectl_manifest.identity-binding-manifest] 
 }
+
+#-------------------------------
+# generate external secret YAML
+#-------------------------------
+
+resource "local_file" "external_secret_values_yaml" {
+  filename = local.external_secret_values_yaml
+  content = templatefile(local.external_secret_values_template_yaml,
+                {
+                  identity_name = local.user_assigned_identity_name
+                }
+              )
+}
+
+resource "local_file" "osdu_dag_sync_secret_yaml" {
+  filename = local.osdu_dag_sync_secret_yaml
+  content = templatefile(local.osdu_dag_sync_secret_template_yaml,
+                {
+                  airflow_namespace = local.airflow_namespace,
+                  keyvault_name     = local.keyvault_name                 
+                }
+            )
+}
+
+resource "local_file" "osdu_airflow_secret_yaml" {
+  filename = local.osdu_airflow_secret_yaml
+  content = templatefile(local.osdu_airflow_secret_template_yaml,
+                {
+                  airflow_namespace = local.airflow_namespace,
+                  keyvault_name     = local.keyvault_name                 
+                }
+            )
+}
+
+resource "local_file" "osdu_az_principal_yaml" {
+  filename = local.osdu_az_principal_yaml
+  content = templatefile(local.osdu_az_principal_template_yaml,
+              {
+                airflow_namespace = local.airflow_namespace,
+                keyvault_name     = local.keyvault_name
+              }
+            )
+}
+
+#-------------------------------
+# setup external secret mapping
+#-------------------------------
+
+resource "kubectl_manifest" "secret-osdu-az-principal" {
+  yaml_body  = local_file.osdu_az_principal_yaml.content
+  depends_on = [helm_release.external-secrets, module.keyvault_secret]
+}
+
+resource "kubectl_manifest" "configmap-airflow-remote-log" {
+  yaml_body = local_file.configmap_airflow_remote_log.content
+  depends_on = [kubernetes_namespace.airflow_namespace]
+}
+
+resource "kubectl_manifest" "dag-sync-secret" {
+  yaml_body = local_file.osdu_dag_sync_secret_yaml.content
+  depends_on = [helm_release.external-secrets, module.keyvault_secret]
+}
+
+resource "kubectl_manifest" "airflow-secret" {
+  yaml_body = local_file.osdu_airflow_secret_yaml.content
+  depends_on = [helm_release.external-secrets,module.keyvault_secret]
+}
+
+
+
+#-------------------------------
+# Airflow
+#-------------------------------
+
+resource "local_file" "airflow_helm_values" {
+  filename = local.airflow_helm_values_yaml
+  content = templatefile(local.airflow_helm_values_template_yaml,
+              {
+                  postgresql_host   = module.postgresql.server_fqdn,
+                  postgresql_user   = local.postgresql_login
+                  redis_host        = module.redis.hostname
+              }
+            ) 
+}
+
+resource "local_file" "configmap_airflow_remote_log" {
+  filename = local.configmap_airflow_remote_log_yaml
+  content = templatefile(local.configmap_airflow_remote_log_template_yaml,
+              {
+                  airflow_namespace = local.airflow_namespace,
+                  keyvault_name     = local.keyvault_name
+              }
+            )
+}
+
 
 resource "null_resource" "helm_local_cache" {
   provisioner "local-exec" {
@@ -614,45 +668,23 @@ resource "kubernetes_config_map" "appinsights_config_map" {
   depends_on = [kubernetes_namespace.airflow_namespace]
 }
 
-provider "kubectl" {
-  config_path = module.aks.kube_config_path
-}
 
-resource "kubectl_manifest" "identity-manifest" {
-  yaml_body   = local_file.azure_identity_yaml.content
-  depends_on  = [helm_release.aad-pod-identity]
-}
 
-resource "kubectl_manifest" "identity-binding-manifest" {
-  yaml_body   = local_file.azure_identity_binding_yaml.content
-  depends_on  = [kubectl_manifest.identity-manifest]
-}
-
-resource "kubectl_manifest" "secret-osdu-az-principal" {
-  yaml_body  = local_file.osdu_az_principal_yaml.content
-  depends_on = [helm_release.external-secrets, module.keyvault_secret]
-}
-
-resource "kubectl_manifest" "configmap-airflow-remote-log" {
-  yaml_body = local_file.configmap_airflow_remote_log.content
-  depends_on = [kubernetes_namespace.airflow_namespace]
-}
-
-resource "kubectl_manifest" "dag-sync-secret" {
-  yaml_body = local_file.osdu_dag_sync_secret_yaml.content
-  depends_on = [helm_release.external-secrets, module.keyvault_secret]
-}
-
-resource "kubectl_manifest" "airflow-secret" {
-  yaml_body = local_file.osdu_airflow_secret_yaml.content
-  depends_on = [helm_release.external-secrets,module.keyvault_secret]
-}
 
 
 #-------------------------------
 # appinsights statsd Kubernetes deployment
 #-------------------------------
 
+resource "local_file" "appinsights_statsd_config" {
+  filename = local.appinsights_statsd_config_js
+  content  = templatefile(local.appinsights_statsd_config_template_js,
+               {
+                  airflow_instance_name = local.airflow_instance_name
+                  appinsights_key       = module.appinsights.instrumentation_key
+               }
+            )
+}
 #-------------------------------
 # Output Variables  (output.tf)
 #-------------------------------
