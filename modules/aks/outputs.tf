@@ -19,3 +19,11 @@ output "kube_config" {
 output "kubeconfig_done" {
   value = join("", local_file.cluster_credentials.*.id)
 }
+
+output "node_resource_group" {
+  value = azurerm_kubernetes_cluster.main.node_resource_group
+}
+
+output "kube_config_path" {
+ value =  local_file.cluster_credentials[0].filename
+}

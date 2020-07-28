@@ -1,0 +1,12 @@
+apiVersion: kubernetes-client.io/v1
+kind: ExternalSecret
+metadata:
+  name: remote-logging-conn
+  namespace: ${airflow_namespace}
+spec:
+  backendType: azureKeyVault
+  keyVaultName: ${keyvault_name}
+  data:
+    - key: airflow-connections-az-log
+      name: remote-logging-connection
+      property: value

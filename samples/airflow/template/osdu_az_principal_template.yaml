@@ -1,0 +1,21 @@
+apiVersion: kubernetes-client.io/v1
+kind: ExternalSecret
+metadata:
+  name: osdu-az-principal
+  namespace: ${airflow_namespace}
+spec:
+  backendType: azureKeyVault
+  keyVaultName: ${keyvault_name}
+  data:
+    - key: osdu-az-principal-client-id
+      name: client_id
+      property: value
+    - key: osdu-az-principal-client-secret
+      name: client_secret
+      property: value
+    - key: osdu-az-principal-resource
+      name: resource
+      property: value
+    - key: osdu-az-principal-tenant-id
+      name: tenant_id
+      property: value
