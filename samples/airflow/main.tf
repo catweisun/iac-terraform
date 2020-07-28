@@ -143,6 +143,14 @@ variable "common_repository_username" {
 variable "common_repository_password" {
   type  = string 
 }
+
+variable "remote_log_account_name" {
+  type  = string
+}
+variable "remote_log_key" {
+  type  = string
+}
+
 data "azurerm_client_config" "current" {}
 #-------------------------------
 # Private Variables  (common.tf)
@@ -334,7 +342,7 @@ module "keyvault_secret" {
     # "clientSecret" = module.service_principal.client_secret
     # "clientId"     = var.client_id
     # "clientSecret" = var.client_secret
-    "airflow-connections-az-log" = format("wasb://%s:%s",local.stg_name,module.storage.primary_access_key)
+    # "airflow-connections-az-log-from-kv" = format("wasb://%s:%s",local.stg_name,module.storage.primary_access_key)
     "airflow-redis-secret" = module.redis.primary_access_key
     "airflow-db-secret" = var.postgresqlpwd
     "osdu-az-principal-client-id" = var.osdu_az_principal_client_id
@@ -594,6 +602,10 @@ resource "local_file" "airflow_helm_values" {
                   postgresql_host   = module.postgresql.server_fqdn,
                   postgresql_user   = local.postgresql_login
                   redis_host        = module.redis.hostname
+                  remote_log_account_name = var.remote_log_account_name
+                  remote_log_key          = var.remote_log_key
+                  key_vault_url           = module.keyvault.uri
+                  identity_name           = local.user_assigned_identity_name
               }
             ) 
 }
@@ -615,6 +627,18 @@ resource "null_resource" "helm_local_cache" {
   }
 }
 
+resource "kubernetes_config_map" "airflow__secrets_backend_kwargs_config_map" {
+  metadata {
+    name = "airflow-secrets-backend-kwargs"
+    namespace = local.airflow_namespace
+  }
+  data = {
+    "airflow-secrets-backend-kwargs" = "{\"connections_prefix\":\"airflow-connections\",\"vault_url\":\"${module.keyvault.uri}\"}"
+  }
+  depends_on = [kubernetes_namespace.airflow_namespace]
+}
+
+
 resource "helm_release" "airflow" {
   name  ="airflow"
   namespace = local.airflow_namespace
@@ -624,6 +648,7 @@ resource "helm_release" "airflow" {
                 kubectl_manifest.configmap-airflow-remote-log,
                 kubectl_manifest.dag-sync-secret,
                 kubectl_manifest.airflow-secret,
+                kubernetes_config_map.airflow__secrets_backend_kwargs_config_map,
                 null_resource.helm_local_cache]
 }
 
