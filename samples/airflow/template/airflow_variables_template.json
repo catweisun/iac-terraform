@@ -1,0 +1,37 @@
+{
+    "osdu_variables_config":{
+        "connection":{
+            "storage_url":"https://ado-dev-3353-335343xe-au-storage.azurewebsites.net",
+            "search_url":"https://ado-dev-3353-335343xe-au-search.azurewebsites.net/query",
+            "schemas_url":"https://ado-dev-3353-335343xe-au-storage.azurewebsites.net/schemas/",
+            "workflow_url":"https://workflow-azure-demo-app.azurewebsites.net/",
+            "token_endpoint":"https://login.microsoftonline.com/58975fd3-4977-44d0-bea8-37af0baac100/oauth2/token",
+            "token_type":"id_token",
+            "retries":3,
+            "timeout":2
+        },
+        "kinds_mapping":{
+            "well" : "well-master",
+            "wellbore" : "wellbore-master",
+            "welllog_wp" : "welllog-wp",
+            "welllog_wpc" : "welllog-wpc",
+            "wellboremarker_wp" : "wellboremarker-wp",
+            "wellboremarker_wpc" : "wellboremarker-wpc",
+            "wellboretrajectory_wp" : "wellboretrajectory-wp",
+            "wellboretrajectory_wpc" : "wellboretrajectory-wpc",
+            "file" : "file"
+        },
+        "kinds_base":{
+            "initial_version":"0.2.0",
+            "enriched_version":"0.2.1",
+            "partition":"opendes",
+            "source":"osdu"
+        }
+    },
+    "data_partition_id":"opendes",
+    "entitlements_module_name":"entitlements_client",
+    "provider":"azure",
+    "search_url":"https://ado-dev-3353-335343xe-au-search.azurewebsites.net/query",
+    "storage_url":"https://ado-dev-3353-335343xe-au-storage.azurewebsites.net/records",
+    "workflow_url":"https://workflow-azure-demo-app.azurewebsites.net/"
+}
