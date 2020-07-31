@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appinsights-statsd
+  namespace: ${airflow_namespace}
+  labels:
+    app: appinsights-statsd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: appinsights-statsd
+  template:
+    metadata:
+      labels:
+        app: appinsights-statsd
+        aadpodidbinding: ${identity_name}
+    spec:
+      containers:
+      - name: appinsights-statsd
+        image: binroon/appinsights-statsd:latest
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 8125
+            protocol: UDP
+        volumeMounts:
+          - name: config-volume
+            mountPath: /usr/src/app/backends/config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi   
+      volumes:
+        - name: config-volume
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "azure-kv-appinsights-statsd-secret"
