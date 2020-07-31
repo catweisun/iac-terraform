@@ -81,7 +81,10 @@ airflow:
   ##     HTTP_PROXY: "http://proxy.example.com:8080"
   ##
   config:
-    # AIRFLOW__SECRETS__BACKEND: airflow.secrets.local_filesystem.LocalFilesystemBackend
+    AIRFLOW__SCHEDULER__STATSD_ON: "True"
+    AIRFLOW__SCHEDULER__STATSD_HOST: "${appinsights-statsd-svc-name}"
+    AIRFLOW__SCHEDULER__STATSD_PORT: 8125
+    AIRFLOW__SCHEDULER__STATSD_PREFIX: "osdu_airflow"
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
     AIRFLOW__WEBSERVER__AUTHENTICATE: "True"
     AIRFLOW__WEBSERVER__AUTH_BACKEND: "airflow.contrib.auth.backends.password_auth"
@@ -92,6 +95,7 @@ airflow:
     AIRFLOW__CORE__LOGGING_CONFIG_CLASS: "log_config.DEFAULT_LOGGING_CONFIG"
     token_endpoint: "https://login.microsoftonline.com/58975fd3-4977-44d0-bea8-37af0baac100/oauth2/token"
     AIRFLOW__CELERY__SSL_ACTIVE: "True"
+
   ## extra annotations for the web/scheduler/worker Pods
   ##
   ## EXAMPLE:
@@ -192,6 +196,7 @@ airflow:
   #   - "https://osduairflowlib.blob.core.windows.net/pythonlib/osdu_data_transformation_lib-0.0.1.tar.gz"
   extraPipPackages: [
     "flask-bcrypt",
+    "apache-airflow[statsd]",
     "apache-airflow-backport-providers-microsoft-azure",
     # "https://osduairflowlib.blob.core.windows.net/pythonlib/airflow_azure_secret-0.0.1.tar.gz",
     "https://osduairflowlib.blob.core.windows.net/pythonlib/azure_osdu_contrib-0.0.2.tar.gz",
@@ -222,7 +227,7 @@ airflow:
         driver: secrets-store.csi.k8s.io
         readOnly: true
         volumeAttributes:
-          secretProviderClass: azure-kv-airflow-conn-var
+          secretProviderClass: azure-kv-airflow-secret
 
 
 ###################################
@@ -1012,7 +1017,7 @@ dags:
     image:
       # repository: alpine/git
       # tag: latest
-      repository: wsosduacr.azurecr.io/osdu/alpine/git
+      repository: alpine/git
       tag: latest
       ## values: Always or IfNotPresent
       pullPolicy: IfNotPresent
