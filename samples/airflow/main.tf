@@ -159,6 +159,28 @@ variable "fernetKey" {
 variable "airflow_dns_name" {
   type  = string
 }
+
+variable "dags_git_url" {
+  type = string
+}
+
+variable "dags_branch" {
+  type = string
+}
+variable "dags_repo_host" {
+  type = string
+}
+
+variable "airflow_public_host_name" {
+  type = string
+}
+
+variable "airflow_public_host_path" {
+  type = string
+}
+variable "token_endpoint" {
+  type = string
+}
 data "azurerm_client_config" "current" {}
 #-------------------------------
 # Private Variables  (common.tf)
@@ -577,7 +599,13 @@ resource "local_file" "airflow_helm_values" {
                   identity_name     = local.user_assigned_identity_name
                   storage_name = module.storage.name,
                   storage_key = module.storage.primary_access_key
-                  appinsights-statsd-svc-name = kubernetes_service.appinsights_statsd.metadata[0].name
+                  appinsights-statsd-svc-name = kubernetes_service.appinsights_statsd.metadata[0].name,
+                  dags_git_url = var.dags_git_url,
+                  dags_branch = var.dags_branch,
+                  dags_repo_host = var.dags_repo_host,
+                  airflow_public_host_path = var.airflow_public_host_path,
+                  airflow_public_host_name=var.airflow_public_host_name,
+                  token_endpoint = var.token_endpoint
               }
             ) 
 }
