@@ -93,7 +93,7 @@ airflow:
     AIRFLOW__CORE__REMOTE_LOG_CONN_ID: "az_log"
     AIRFLOW__CORE__REMOTE_BASE_LOG_FOLDER: "wasb-airflowlog"
     AIRFLOW__CORE__LOGGING_CONFIG_CLASS: "log_config.DEFAULT_LOGGING_CONFIG"
-    token_endpoint: "https://login.microsoftonline.com/58975fd3-4977-44d0-bea8-37af0baac100/oauth2/token"
+    token_endpoint: "${token_endpoint}"
     AIRFLOW__CELERY__SSL_ACTIVE: "True"
 
   ## extra annotations for the web/scheduler/worker Pods
@@ -492,7 +492,7 @@ web:
   ## NOTE:
   ## - should be compatible with `ingress.web.path` config
   ##
-  baseUrl: "http://localhost/devint/airflow"
+  baseUrl: "http://localhost/${airflow_public_host_path}"
 
   ## sets `AIRFLOW__CORE__STORE_SERIALIZED_DAGS`
   ##
@@ -905,11 +905,11 @@ dags:
     ## EXAMPLE: (SSH)
     ##   url: "ssh://git@github.com:torvalds/linux.git"
     ##
-    url: git@ssh.dev.azure.com:v3/osdu-demo/OSDU_Rx/os-dags
+    url: ${dags_git_url}
 
     ## the branch/tag/sha1 which we clone
     ##
-    ref: dags
+    ref: ${dags_branch}
 
     ## the name of a pre-created secret containing files for ~/.ssh/
     ##
@@ -947,7 +947,7 @@ dags:
     ## EXAMPLE:
     ##   repoHost: "github.com"
     ##
-    repoHost: "ssh.dev.azure.com"
+    repoHost: "${dags_repo_host}"
 
     ## the port of the git repo
     ##
@@ -1074,11 +1074,11 @@ ingress:
     ## - API:    http://example.com/airflow/api
     ## - HEALTH: http://example.com/airflow/health
     ##
-    path: "/devint/airflow"
+    path: "${airflow_public_host_path}"
 
     ## the hostname for the web Ingress
     ##
-    host: "wfenginev7.msft-osdu-test.org"
+    host: "${airflow_public_host_name}"
 
     ## the livenessPath for the web Ingress
     ##
