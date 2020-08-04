@@ -654,9 +654,9 @@ resource "helm_release" "airflow" {
 
 resource "helm_release" "traefik" {
   name  ="traefik"
-  # repository = "https://kubernetes-charts.storage.googleapis.com"
+  repository = "https://kubernetes-charts.storage.googleapis.com"
   namespace  = "traefik"
-  chart ="stable/traefik"
+  chart ="traefik"
   set {
     name  = "kubernetes.ingressClass"
     value = "traefik"
