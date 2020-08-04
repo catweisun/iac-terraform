@@ -156,9 +156,9 @@ variable "common_repository_password" {
 variable "fernetKey" {
   type  = string
 }
-variable "airflow_dns_name" {
-  type  = string
-}
+# variable "airflow_dns_name" {
+#   type  = string
+# }
 
 variable "dags_git_url" {
   type = string
