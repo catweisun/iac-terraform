@@ -146,12 +146,12 @@ variable "common_repository_password" {
   type  = string 
 }
 
-variable "remote_log_account_name" {
-  type  = string
-}
-variable "remote_log_key" {
-  type  = string
-}
+# variable "remote_log_account_name" {
+#   type  = string
+# }
+# variable "remote_log_key" {
+#   type  = string
+# }
 
 variable "fernetKey" {
   type  = string
@@ -617,8 +617,7 @@ resource "local_file" "configmap_airflow_remote_log" {
   filename = local.configmap_airflow_remote_log_yaml
   content = templatefile(local.configmap_airflow_remote_log_template_yaml,
               {
-                  airflow_namespace = local.airflow_namespace,
-                  keyvault_name     = local.keyvault_name
+                  airflow_namespace = local.airflow_namespace
               }
             )
 }
