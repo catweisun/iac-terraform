@@ -650,12 +650,7 @@ resource "helm_release" "traefik" {
   name  ="traefik"
   repository = "https://kubernetes-charts.storage.googleapis.com"
   namespace  = "traefik"
-<<<<<<< HEAD
   chart ="traefik"
-=======
-  create_namespace = true
-  chart ="stable/traefik"
->>>>>>> 0a1a34490242f7e78339e465d723e1fd78a8952e
   set {
     name  = "kubernetes.ingressClass"
     value = "traefik"
