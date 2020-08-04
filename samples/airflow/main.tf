@@ -625,7 +625,7 @@ resource "local_file" "configmap_airflow_remote_log" {
 
 resource "null_resource" "helm_local_cache" {
   provisioner "local-exec" {
-    command = "echo ${var.common_repository_password} | helm registry login ${var.common_repository} --username ${var.common_repository_username} --password-stdin && helm chart pull ${local.airflow_helm_chart} && helm chart export ${local.airflow_helm_chart} --destination ${local.airflow_helm_local_chart_dir} && helm dependency build ${local.airflow_helm_local_chart_dir}"
+    command = "echo ${var.common_repository_password} | helm registry login ${var.common_repository} --username ${var.common_repository_username} --password-stdin && helm chart pull ${local.airflow_helm_chart} && helm chart export ${local.airflow_helm_chart} --destination ${local.airflow_helm_local_chart_dir} && helm dependency build ${local.airflow_helm_local_chart}"
   }
 }
 
