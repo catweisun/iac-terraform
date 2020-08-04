@@ -218,7 +218,7 @@ locals {
   # deployment manifest files
   auzre_identity_yaml                          = "${var.output_directory}/azure_identity.yaml"
   azure_identity_binding_yaml                  = "${var.output_directory}/azure_identity_binding.yaml"
-  external_secret_values_yaml                  = "${var.output_directory}/external_secret_values.yaml"
+  # external_secret_values_yaml                  = "${var.output_directory}/external_secret_values.yaml"
   osdu_az_principal_yaml                       = "${var.output_directory}/osdu_az_principal.yaml"
 
   configmap_airflow_remote_log_yaml            = "${var.output_directory}/configmap_airflow_remote_log_config.yaml"
@@ -235,7 +235,7 @@ locals {
   # template files
   auzre_identity_template_yaml                = "./template/azure_identity_template.yaml"
   azure_identity_binding_template_yaml        = "./template/azure_identity_binding_template.yaml"
-  external_secret_values_template_yaml        = "./template/external_secret_values_template.yaml"
+  # external_secret_values_template_yaml        = "./template/external_secret_values_template.yaml"
   osdu_az_principal_template_yaml             = "./template/osdu_az_principal_template.yaml"
   configmap_airflow_remote_log_template_yaml   = "./template/configmap_airflow_remote_log_template.yaml"
   airflow_helm_values_template_yaml            = "./template/osud_airflow_helm_values_template.yaml"
