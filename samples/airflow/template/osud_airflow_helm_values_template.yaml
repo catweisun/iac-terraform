@@ -1315,7 +1315,7 @@ externalDatabase:
 
   ## the database connection parameters of the external database
   ##
-  options: "?sslmode=require"
+  properties: "?sslmode=require"
 
   ## the name of a pre-created secret containing the external database password
   ##
