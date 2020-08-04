@@ -238,7 +238,7 @@ locals {
   # external_secret_values_template_yaml        = "./template/external_secret_values_template.yaml"
   osdu_az_principal_template_yaml             = "./template/osdu_az_principal_template.yaml"
   configmap_airflow_remote_log_template_yaml   = "./template/configmap_airflow_remote_log_template.yaml"
-  airflow_helm_values_template_yaml            = "./template/osud_airflow_helm_values_template.yaml"
+  airflow_helm_values_template_yaml            = "./template/osdu_airflow_helm_values_template.yaml"
   appinsights_statsd_config_template_js        = "./template/appinsights_statsd_config_template.js"
   appinsights_statsd_template_yaml             = "./template/appinsights_statsd_template.yaml"
   secret_provider_class_airflow_template_yaml         = "./template/secret_provider_class_airflow_template.yaml"
