@@ -5,9 +5,9 @@ airflow:
   ## configs for the docker image of the web/scheduler/worker
   ##
   image:
-    # repository: apache/airflow
-    repository: wsosduacr.azurecr.io/osdu/apache/airflow
-    tag: 1.10.10-python3.6
+    repository: apache/airflow
+    # repository: wsosduacr.azurecr.io/osdu/apache/airflow
+    tag: 1.10.11-python3.6
     ## values: Always or IfNotPresent
     pullPolicy: IfNotPresent
     pullSecret: ""
@@ -40,7 +40,7 @@ airflow:
   ## GENERATE:
   ##   python -c "from cryptography.fernet import Fernet; FERNET_KEY = Fernet.generate_key().decode(); print(FERNET_KEY)"
   ##
-  fernetKey: "7T512UXSSmBOkpWimFHIVb8jK6lfmSAvx4mO6Arehnc="
+  # fernetKey: "7T512UXSSmBOkpWimFHIVb8jK6lfmSAvx4mO6Arehnc="
 
   ## environment variables for the web/scheduler/worker Pods (for airflow configs)
   ##
@@ -81,8 +81,10 @@ airflow:
   ##     HTTP_PROXY: "http://proxy.example.com:8080"
   ##
   config:
-    AIRFLOW__SECRETS__BACKEND: "airflow_azure_secret.azure_key_vault_backend.AzureKeyVaultBackend"
-    # AIRFLOW__SECRETS__BACKEND_KWARGS: \"{"connections_prefix":"airflow-connections","vault_url":"${key_vault_url}"}\"
+    AIRFLOW__SCHEDULER__STATSD_ON: "True"
+    AIRFLOW__SCHEDULER__STATSD_HOST: "${appinsights-statsd-svc-name}"
+    AIRFLOW__SCHEDULER__STATSD_PORT: 8125
+    AIRFLOW__SCHEDULER__STATSD_PREFIX: "osdu_airflow"
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
     AIRFLOW__WEBSERVER__AUTHENTICATE: "True"
     AIRFLOW__WEBSERVER__AUTH_BACKEND: "airflow.contrib.auth.backends.password_auth"
@@ -91,8 +93,9 @@ airflow:
     AIRFLOW__CORE__REMOTE_LOG_CONN_ID: "az_log"
     AIRFLOW__CORE__REMOTE_BASE_LOG_FOLDER: "wasb-airflowlog"
     AIRFLOW__CORE__LOGGING_CONFIG_CLASS: "log_config.DEFAULT_LOGGING_CONFIG"
-    token_endpoint: "https://login.microsoftonline.com/58975fd3-4977-44d0-bea8-37af0baac100/oauth2/token"
+    token_endpoint: "${token_endpoint}"
     AIRFLOW__CELERY__SSL_ACTIVE: "True"
+
   ## extra annotations for the web/scheduler/worker Pods
   ##
   ## EXAMPLE:
@@ -118,11 +121,11 @@ airflow:
   ##
   # extraEnv: []
   extraEnv:
-  #  - name: AIRFLOW__CORE__FERNET_KEY
-  #    valueFrom:
-  #      secretKeyRef:
-  #        name: airflow
-  #        key: fernet_key
+   - name: AIRFLOW__CORE__FERNET_KEY
+     valueFrom:
+       secretKeyRef:
+         name: osdu-airflow-secret
+         key: fernetKey
    - name: client_id
      valueFrom:
        secretKeyRef:
@@ -143,11 +146,11 @@ airflow:
        secretKeyRef:
         name: osdu-az-principal
         key: resource
-   - name: AIRFLOW__SECRETS__BACKEND_KWARGS
-     valueFrom:
-        configMapKeyRef:
-          name: airflow-secrets-backend-kwargs
-          key: airflow-secrets-backend-kwargs
+  #  - name: AIRFLOW__SECRETS__BACKEND_KWARGS
+  #    valueFrom:
+  #       configMapKeyRef:
+  #         name: airflow-secrets-backend-kwargs
+  #         key: airflow-secrets-backend-kwargs
 
   ## extra configMap volumeMounts for the web/scheduler/worker Pods
   ##
@@ -193,8 +196,9 @@ airflow:
   #   - "https://osduairflowlib.blob.core.windows.net/pythonlib/osdu_data_transformation_lib-0.0.1.tar.gz"
   extraPipPackages: [
     "flask-bcrypt",
+    "apache-airflow[statsd]",
     "apache-airflow-backport-providers-microsoft-azure",
-    "https://osduairflowlib.blob.core.windows.net/pythonlib/airflow_azure_secret-0.0.1.tar.gz",
+    # "https://osduairflowlib.blob.core.windows.net/pythonlib/airflow_azure_secret-0.0.1.tar.gz",
     "https://osduairflowlib.blob.core.windows.net/pythonlib/azure_osdu_contrib-0.0.2.tar.gz",
     "https://osduairflowlib.blob.core.windows.net/pythonlib/osdu_api-0.0.3.tar.gz",
     "https://osduairflowlib.blob.core.windows.net/pythonlib/osdu_data_transformation_lib-0.0.1.tar.gz"
@@ -206,7 +210,9 @@ airflow:
   ##     - name: synchronised-dags
   ##       mountPath: /opt/airflow/dags
   ##
-  extraVolumeMounts: []
+  extraVolumeMounts:
+    - name: secrets-store-inline
+      mountPath: "/var/airflow/secrets/kvbackend"
 
   ## extra volumes for the web/scheduler/worker Pods
   ##
@@ -215,7 +221,13 @@ airflow:
   ##     - name: synchronised-dags
   ##       emptyDir: {}
   ##
-  extraVolumes: []
+  extraVolumes:
+    - name: secrets-store-inline
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: azure-kv-airflow-secret
 
 
 ###################################
@@ -297,11 +309,12 @@ scheduler:
   ##         }
   ##
   # connections: []
+
   connections:
     - id: az_log
       type: wasb
-      login: ${remote_log_account_name}
-      password: '${remote_log_key}'
+      login: ${storage_name}
+      password: "${storage_key}"
 
 
   ## custom airflow variables for the airflow scheduler
@@ -313,6 +326,7 @@ scheduler:
   ##   variables: |
   ##     { "environment": "dev" }
   ##
+
   variables: |  
       {
         "osdu_variables_config":{
@@ -478,7 +492,7 @@ web:
   ## NOTE:
   ## - should be compatible with `ingress.web.path` config
   ##
-  baseUrl: "http://localhost/devint/airflow"
+  baseUrl: "http://localhost/${airflow_public_host_path}"
 
   ## sets `AIRFLOW__CORE__STORE_SERIALIZED_DAGS`
   ##
@@ -891,11 +905,11 @@ dags:
     ## EXAMPLE: (SSH)
     ##   url: "ssh://git@github.com:torvalds/linux.git"
     ##
-    url: git@ssh.dev.azure.com:v3/osdu-demo/OSDU_Rx/os-dags
+    url: ${dags_git_url}
 
     ## the branch/tag/sha1 which we clone
     ##
-    ref: dags
+    ref: ${dags_branch}
 
     ## the name of a pre-created secret containing files for ~/.ssh/
     ##
@@ -904,7 +918,7 @@ dags:
     ## - the secret commonly includes files: id_rsa, id_rsa.pub, known_hosts
     ## - known_hosts is NOT NEEDED if `git.sshKeyscan` is true
     ##
-    secret: "osdu-dag-sync-secret"
+    secret: "airflow-dag-sync-secret"
 
     ## if we should implicitly trust [git.repoHost]:git.repoPort, by auto creating a ~/.ssh/known_hosts
     ##
@@ -933,7 +947,7 @@ dags:
     ## EXAMPLE:
     ##   repoHost: "github.com"
     ##
-    repoHost: "ssh.dev.azure.com"
+    repoHost: "${dags_repo_host}"
 
     ## the port of the git repo
     ##
@@ -1003,7 +1017,7 @@ dags:
     image:
       # repository: alpine/git
       # tag: latest
-      repository: wsosduacr.azurecr.io/osdu/alpine/git
+      repository: alpine/git
       tag: latest
       ## values: Always or IfNotPresent
       pullPolicy: IfNotPresent
@@ -1060,11 +1074,11 @@ ingress:
     ## - API:    http://example.com/airflow/api
     ## - HEALTH: http://example.com/airflow/health
     ##
-    path: "/devint/airflow"
+    path: "${airflow_public_host_path}"
 
     ## the hostname for the web Ingress
     ##
-    host: "wfenginev7.msft-osdu-test.org"
+    host: "${airflow_public_host_name}"
 
     ## the livenessPath for the web Ingress
     ##
@@ -1301,7 +1315,7 @@ externalDatabase:
 
   ## the database connection parameters of the external database
   ##
-  options: "?sslmode=require"
+  properties: "?sslmode=require"
 
   ## the name of a pre-created secret containing the external database password
   ##

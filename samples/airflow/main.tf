@@ -35,7 +35,9 @@ provider "local" {
 provider "azuread" {
   version = "=0.10.0"
 }
-
+provider "external" {
+  version = "1.2.0"
+}
 provider "kubectl" {
   config_path = module.aks.kube_config_path
 }
@@ -144,13 +146,41 @@ variable "common_repository_password" {
   type  = string 
 }
 
-variable "remote_log_account_name" {
+# variable "remote_log_account_name" {
+#   type  = string
+# }
+# variable "remote_log_key" {
+#   type  = string
+# }
+
+variable "fernetKey" {
   type  = string
 }
-variable "remote_log_key" {
-  type  = string
+# variable "airflow_dns_name" {
+#   type  = string
+# }
+
+variable "dags_git_url" {
+  type = string
 }
 
+variable "dags_branch" {
+  type = string
+}
+variable "dags_repo_host" {
+  type = string
+}
+
+variable "airflow_public_host_name" {
+  type = string
+}
+
+variable "airflow_public_host_path" {
+  type = string
+}
+variable "token_endpoint" {
+  type = string
+}
 data "azurerm_client_config" "current" {}
 #-------------------------------
 # Private Variables  (common.tf)
@@ -167,46 +197,53 @@ locals {
   base_name_21 = length(local.base_name) < 22 ? local.base_name : "${substr(local.base_name, 0, 21 - length(local.suffix))}${local.suffix}"
 
   // Resolved resource names
-  name                                        = "${local.base_name}"
-  stg_name                                    = "${replace(local.base_name, "-", "")}stg"
-  vnet_name                                   = "${local.base_name}-vnet"
-  cluster_name                                = "${local.base_name}-cluster"
-  registry_name                               = "${replace(local.base_name_21, "-", "")}"
-  keyvault_name                               = "${local.base_name_21}-kv"
-  appinsights_name                            = "${local.base_name}-appinsights"
-  ad_principal_name                           = "${local.base_name}-principal"
-  postgresql_server                           = "${local.base_name}-airflowdb"
-  redis_server                                = "${local.base_name}-redis"
-  user_assigned_identity_name                 = "${local.base_name}-usi"
-  user_assigned_identity_binding_name         = "${local.user_assigned_identity_name}-binding"
-  tenant_id                                   = data.azurerm_client_config.current.tenant_id
-  airflow_namespace                           = "airflow${var.environemtn_name}"
-  airflow_instance_name                       = "${local.base_name}-airflow"
-  kube_config_path                            = "${var.output_directory}/${var.kubeconfig_filename}"
-  postgresql_login                            = "${var.postgresqllogin}@${local.postgresql_server}"
+  name                                         = "${local.base_name}"
+  stg_name                                     = "${replace(local.base_name, "-", "")}stg"
+  vnet_name                                    = "${local.base_name}-vnet"
+  cluster_name                                 = "${local.base_name}-cluster"
+  registry_name                                = "${replace(local.base_name_21, "-", "")}"
+  keyvault_name                                = "${local.base_name_21}-kv"
+  appinsights_name                             = "${local.base_name}-appinsights"
+  ad_principal_name                            = "${local.base_name}-principal"
+  postgresql_server                            = "${local.base_name}-airflowdb"
+  redis_server                                 = "${local.base_name}-redis"
+  user_assigned_identity_name                  = "${local.base_name}-usi"
+  user_assigned_identity_binding_name          = "${local.user_assigned_identity_name}-binding"
+  tenant_id                                    = data.azurerm_client_config.current.tenant_id
+  subscription_id                              = data.azurerm_client_config.current.subscription_id
+  airflow_namespace                            = "airflow${var.environemtn_name}"
+  airflow_instance_name                        = "${local.base_name}-airflow"
+  kube_config_path                             = "${var.output_directory}/${var.kubeconfig_filename}"
+  postgresql_login                             = "${var.postgresqllogin}@${local.postgresql_server}"
   # deployment manifest files
-  auzre_identity_yaml                         = "${var.output_directory}/azure_identity.yaml"
-  azure_identity_binding_yaml                 = "${var.output_directory}/azure_identity_binding.yaml"
-  external_secret_values_yaml                 = "${var.output_directory}/external_secret_values.yaml"
-  osdu_az_principal_yaml                      = "${var.output_directory}/osdu_az_principal.yaml"
-  osdu_dag_sync_secret_yaml                   = "${var.output_directory}/osdu_dag_sync_secret.yaml"
-  osdu_airflow_secret_yaml                    = "${var.output_directory}/osdu_airlfow_secret.yaml"
-  configmap_airflow_remote_log_yaml           = "${var.output_directory}/configmap_airflow_remote_log_config.yaml"
-  airflow_helm_values_yaml                    = "${var.output_directory}/airflow_helm_values_yaml.yaml"
-  airflow_helm_local_chart_dir                = "${var.output_directory}/helm/charts"
-  airflow_helm_local_chart                    = "${var.output_directory}/helm/charts/airflow"
-  airflow_helm_chart                          = "${var.common_repository}/osdu/airflow:latest"
+  auzre_identity_yaml                          = "${var.output_directory}/azure_identity.yaml"
+  azure_identity_binding_yaml                  = "${var.output_directory}/azure_identity_binding.yaml"
+  # external_secret_values_yaml                  = "${var.output_directory}/external_secret_values.yaml"
+  osdu_az_principal_yaml                       = "${var.output_directory}/osdu_az_principal.yaml"
+
+  configmap_airflow_remote_log_yaml            = "${var.output_directory}/configmap_airflow_remote_log_config.yaml"
+  airflow_helm_values_yaml                     = "${var.output_directory}/airflow_helm_values_yaml.yaml"
+  airflow_helm_local_chart_dir                 = "${var.output_directory}/helm/charts"
+  airflow_helm_local_chart                     = "${var.output_directory}/helm/charts/airflow"
+  airflow_helm_chart                           = "${var.common_repository}/osdu/airflow:latest"
   appinsights_statsd_config_js                 = "${var.output_directory}/appinsights_statsd_config.js"
+  appinsights_statsd_yaml                      = "${var.output_directory}/appinsights_statsd.yaml"
+  secret_provider_class_airflow_yaml           = "${var.output_directory}/secret_provider_class_airflow.yaml"
+  secret_provider_class_appinsights_statsd_yaml = "${var.output_directory}/secret_provider_class_appinsights_statsd.yaml"
+
+
   # template files
   auzre_identity_template_yaml                = "./template/azure_identity_template.yaml"
   azure_identity_binding_template_yaml        = "./template/azure_identity_binding_template.yaml"
-  external_secret_values_template_yaml        = "./template/external_secret_values_template.yaml"
+  # external_secret_values_template_yaml        = "./template/external_secret_values_template.yaml"
   osdu_az_principal_template_yaml             = "./template/osdu_az_principal_template.yaml"
-  osdu_dag_sync_secret_template_yaml          = "./template/osdu_dag_sync_secret_template.yaml"
-  osdu_airflow_secret_template_yaml           = "./template/osdu_airflow_secret_template.yaml"
-  configmap_airflow_remote_log_template_yaml  = "./template/configmap_airflow_remote_log_template.yaml"
-  airflow_helm_values_template_yaml           = "./template/osud_airflow_helm_values_template.yaml"
+  configmap_airflow_remote_log_template_yaml   = "./template/configmap_airflow_remote_log_template.yaml"
+  airflow_helm_values_template_yaml            = "./template/osdu_airflow_helm_values_template.yaml"
   appinsights_statsd_config_template_js        = "./template/appinsights_statsd_config_template.js"
+  appinsights_statsd_template_yaml             = "./template/appinsights_statsd_template.yaml"
+  secret_provider_class_airflow_template_yaml         = "./template/secret_provider_class_airflow_template.yaml"
+  secret_provider_class_appinsights_statsd_template_yaml         = "./template/secret_provider_class_appinsights_statsd_template.yaml"
+
 }
 
 
@@ -292,7 +329,7 @@ module "network" {
   name                = local.vnet_name
   resource_group_name = module.resource_group.name
   address_space       = "10.10.0.0/16"
-  dns_servers         = ["8.8.8.8"]
+  # dns_servers         = ["8.8.8.8"]
   subnet_prefixes     = ["10.10.0.0/17"]
   subnet_names        = ["Cluster-Subnet"]
 }
@@ -310,6 +347,26 @@ module "container_registry" {
   is_admin_enabled = false
 }
 
+#-------------------------------
+# Azure PostgreSQL database
+#-------------------------------
+module "postgresql" {
+  source = "../../modules/postgresql"
+  postgresql_login         = var.postgresqllogin
+  postgresql_password      = var.postgresqlpwd
+  postgresql_server_name   = local.postgresql_server
+  resource_group_name      = module.resource_group.name
+}
+
+
+#-------------------------------
+# Azure Redis Cache Service
+#-------------------------------
+module "redis" {
+  source = "../../modules/redis-cache"
+  name                     = local.redis_server
+  resource_group_name      = module.resource_group.name          
+}
 
 #-------------------------------
 # Azure Key Vault
@@ -331,6 +388,20 @@ data "local_file" "dag_sync_key_file" {
   filename = var.dag_sync_key_file
 }
 
+#-------------------------------
+# appinsights statsd config
+#-------------------------------
+
+resource "local_file" "appinsights_statsd_config" {
+  filename = local.appinsights_statsd_config_js
+  content  = templatefile(local.appinsights_statsd_config_template_js,
+               {
+                  airflow_instance_name = local.airflow_instance_name
+                  appinsights_key       = module.appinsights.instrumentation_key
+               }
+            )
+}
+
 module "keyvault_secret" {
   # Module Path
   source = "../../modules/keyvault-secret"
@@ -342,14 +413,15 @@ module "keyvault_secret" {
     # "clientSecret" = module.service_principal.client_secret
     # "clientId"     = var.client_id
     # "clientSecret" = var.client_secret
-    # "airflow-connections-az-log-from-kv" = format("wasb://%s:%s",local.stg_name,module.storage.primary_access_key)
+    "appinsights-statsd-config" = local_file.appinsights_statsd_config.content
     "airflow-redis-secret" = module.redis.primary_access_key
     "airflow-db-secret" = var.postgresqlpwd
     "osdu-az-principal-client-id" = var.osdu_az_principal_client_id
     "osdu-az-principal-client-secret" = var.osdu_az_principal_client_secret
     "osdu-az-principal-resource" = var.osdu_az_principal_resource
     "osdu-az-principal-tenant-id" = var.osdu_az_principal_tenant_id
-    "osdu-dag-sync-key"           = data.local_file.dag_sync_key_file.content_base64
+    "airflow-dag-sync-key"           = data.local_file.dag_sync_key_file.content
+    "airflow-fernetKey"                   = var.fernetKey
   }
 }
 
@@ -367,7 +439,29 @@ module "appinsights" {
   resource_group_name = module.resource_group.name  
 }
 
+#-------------------------------
+# Azure Kubernetes Service
+#-------------------------------
+module "aks" {
+  source = "../../modules/aks"
 
+  name                     = local.cluster_name
+  resource_group_name      = module.resource_group.name
+  dns_prefix               = local.cluster_name
+  # service_principal_id     = module.service_principal.client_id
+  # service_principal_secret = module.service_principal.client_secret
+  service_principal_id     = var.client_id
+  service_principal_secret = var.client_secret
+  agent_vm_count           = var.agent_vm_count
+  agent_vm_size            = var.agent_vm_size
+  kubernetes_version       = "1.17.7"
+  ssh_public_key = "${trimspace(tls_private_key.key.public_key_openssh)} k8sadmin"
+  vnet_subnet_id = module.network.subnets.0
+
+  resource_tags = {
+    iac = "terraform"
+  }
+}
 #-------------------------------
 # Azure Pod Identity
 #-------------------------------
@@ -443,153 +537,53 @@ resource "kubectl_manifest" "identity-binding-manifest" {
   depends_on  = [kubectl_manifest.identity-manifest]
 }
 
-
-
-
-
-
-
-
 #-------------------------------
-# Azure Kubernetes Service
-#-------------------------------
-module "aks" {
-  source = "../../modules/aks"
-
-  name                     = local.cluster_name
-  resource_group_name      = module.resource_group.name
-  dns_prefix               = local.cluster_name
-  # service_principal_id     = module.service_principal.client_id
-  # service_principal_secret = module.service_principal.client_secret
-  service_principal_id     = var.client_id
-  service_principal_secret = var.client_secret
-  agent_vm_count           = var.agent_vm_count
-  agent_vm_size            = var.agent_vm_size
-  kubernetes_version       = "1.17.7"
-  ssh_public_key = "${trimspace(tls_private_key.key.public_key_openssh)} k8sadmin"
-  vnet_subnet_id = module.network.subnets.0
-
-  resource_tags = {
-    iac = "terraform"
-  }
-}
-
-
-#-------------------------------
-# Azure PostgreSQL database
-#-------------------------------
-module "postgresql" {
-  source = "../../modules/postgresql"
-  postgresql_login         = var.postgresqllogin
-  postgresql_password      = var.postgresqlpwd
-  postgresql_server_name   = local.postgresql_server
-  resource_group_name      = module.resource_group.name
-}
-
-
-#-------------------------------
-# Azure Redis Cache Service
-#-------------------------------
-module "redis" {
-  source = "../../modules/redis-cache"
-  name                     = local.redis_server
-  resource_group_name      = module.resource_group.name          
-}
-
-
-#-------------------------------
-# Install external secrets
+# azure secret store csi driver provider
 #-------------------------------
 
-
-resource "helm_release" "external-secrets" {
-  name = "external-secrets"
-  repository = "https://godaddy.github.io/kubernetes-external-secrets/"
-  chart = "kubernetes-external-secrets"
-  # values = [local_file.external_secret_values_yaml.content]
-  set {
-    name = "podLabels.aadpodidbinding"
-    value = local.user_assigned_identity_name
-  }
-  set {
-    name = "image.tag"
-    value = "5.0.0"
-  }
-  set {
-    name = "env.POLLER_INTERVAL_MILLISECONDS"
-    value = 30000
-  }
-  depends_on = [kubectl_manifest.identity-binding-manifest] 
-}
-
-#-------------------------------
-# generate external secret YAML
-#-------------------------------
-
-resource "local_file" "external_secret_values_yaml" {
-  filename = local.external_secret_values_yaml
-  content = templatefile(local.external_secret_values_template_yaml,
-                {
-                  identity_name = local.user_assigned_identity_name
-                }
-              )
-}
-
-resource "local_file" "osdu_dag_sync_secret_yaml" {
-  filename = local.osdu_dag_sync_secret_yaml
-  content = templatefile(local.osdu_dag_sync_secret_template_yaml,
-                {
-                  airflow_namespace = local.airflow_namespace,
-                  keyvault_name     = local.keyvault_name                 
-                }
-            )
-}
-
-resource "local_file" "osdu_airflow_secret_yaml" {
-  filename = local.osdu_airflow_secret_yaml
-  content = templatefile(local.osdu_airflow_secret_template_yaml,
-                {
-                  airflow_namespace = local.airflow_namespace,
-                  keyvault_name     = local.keyvault_name                 
-                }
-            )
-}
-
-resource "local_file" "osdu_az_principal_yaml" {
-  filename = local.osdu_az_principal_yaml
-  content = templatefile(local.osdu_az_principal_template_yaml,
+resource "local_file" "secret_provider_class_appinsights_statsd_yaml" {
+  filename = local.secret_provider_class_appinsights_statsd_yaml
+  content = templatefile(local.secret_provider_class_appinsights_statsd_template_yaml,
               {
-                airflow_namespace = local.airflow_namespace,
-                keyvault_name     = local.keyvault_name
+                resource_group_name = module.resource_group.name,
+                keyvault_name       = module.keyvault.name,
+                subscription_id     = local.subscription_id
+                tenant_id           = local.tenant_id
+                airflow_namespace   = local.airflow_namespace
               }
             )
 }
 
-#-------------------------------
-# setup external secret mapping
-#-------------------------------
-
-resource "kubectl_manifest" "secret-osdu-az-principal" {
-  yaml_body  = local_file.osdu_az_principal_yaml.content
-  depends_on = [helm_release.external-secrets, module.keyvault_secret]
+resource "local_file" "secret_provider_class_airflow_yaml" {
+  filename = local.secret_provider_class_airflow_yaml
+  content = templatefile(local.secret_provider_class_airflow_template_yaml,
+              {
+                resource_group_name = module.resource_group.name,
+                keyvault_name       = module.keyvault.name,
+                subscription_id     = local.subscription_id
+                tenant_id           = local.tenant_id
+                airflow_namespace   = local.airflow_namespace
+              }
+            )
 }
 
-resource "kubectl_manifest" "configmap-airflow-remote-log" {
-  yaml_body = local_file.configmap_airflow_remote_log.content
-  depends_on = [kubernetes_namespace.airflow_namespace]
+resource "helm_release" "csi-secrets-store-provider-azure" {
+  name                            = "csi-secrets-store-provider-azure"
+  repository                      = "https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/charts"
+  chart                           = "csi-secrets-store-provider-azure"
+  depends_on                      =[module.aks,kubectl_manifest.identity-binding-manifest]
 }
 
-resource "kubectl_manifest" "dag-sync-secret" {
-  yaml_body = local_file.osdu_dag_sync_secret_yaml.content
-  depends_on = [helm_release.external-secrets, module.keyvault_secret]
+resource "kubectl_manifest" "secret_provider_class_airflow" {
+  yaml_body = local_file.secret_provider_class_airflow_yaml.content
+  depends_on = [helm_release.csi-secrets-store-provider-azure,
+                module.keyvault_secret]
 }
 
-resource "kubectl_manifest" "airflow-secret" {
-  yaml_body = local_file.osdu_airflow_secret_yaml.content
-  depends_on = [helm_release.external-secrets,module.keyvault_secret]
+resource "kubectl_manifest" "secret_provider_class_appinsights_statsd" {
+  yaml_body = local_file.secret_provider_class_appinsights_statsd_yaml.content
+  depends_on = [helm_release.csi-secrets-store-provider-azure,module.keyvault_secret]
 }
-
-
 
 #-------------------------------
 # Airflow
@@ -600,22 +594,30 @@ resource "local_file" "airflow_helm_values" {
   content = templatefile(local.airflow_helm_values_template_yaml,
               {
                   postgresql_host   = module.postgresql.server_fqdn,
-                  postgresql_user   = local.postgresql_login
-                  redis_host        = module.redis.hostname
-                  remote_log_account_name = var.remote_log_account_name
-                  remote_log_key          = var.remote_log_key
-                  key_vault_url           = module.keyvault.uri
-                  identity_name           = local.user_assigned_identity_name
+                  postgresql_user   = local.postgresql_login,
+                  redis_host        = module.redis.hostname,
+                  identity_name     = local.user_assigned_identity_name
+                  storage_name = module.storage.name,
+                  storage_key = module.storage.primary_access_key
+                  appinsights-statsd-svc-name = kubernetes_service.appinsights_statsd.metadata[0].name,
+                  dags_git_url = var.dags_git_url,
+                  dags_branch = var.dags_branch,
+                  dags_repo_host = var.dags_repo_host,
+                  airflow_public_host_path = var.airflow_public_host_path,
+                  airflow_public_host_name=var.airflow_public_host_name,
+                  token_endpoint = var.token_endpoint
               }
             ) 
 }
-
+resource "kubectl_manifest" "configmap_airflow_remote_log" {
+  yaml_body = local_file.configmap_airflow_remote_log.content
+  depends_on = [kubernetes_namespace.airflow_namespace]
+}
 resource "local_file" "configmap_airflow_remote_log" {
   filename = local.configmap_airflow_remote_log_yaml
   content = templatefile(local.configmap_airflow_remote_log_template_yaml,
               {
-                  airflow_namespace = local.airflow_namespace,
-                  keyvault_name     = local.keyvault_name
+                  airflow_namespace = local.airflow_namespace
               }
             )
 }
@@ -623,32 +625,24 @@ resource "local_file" "configmap_airflow_remote_log" {
 
 resource "null_resource" "helm_local_cache" {
   provisioner "local-exec" {
-    command = "echo ${var.common_repository_password} | helm registry login ${var.common_repository} --username ${var.common_repository_username} --password-stdin && helm chart pull ${local.airflow_helm_chart} && helm chart export ${local.airflow_helm_chart} --destination ${local.airflow_helm_local_chart_dir}"
+    command = "echo ${var.common_repository_password} | helm registry login ${var.common_repository} --username ${var.common_repository_username} --password-stdin && helm chart pull ${local.airflow_helm_chart} && helm chart export ${local.airflow_helm_chart} --destination ${local.airflow_helm_local_chart_dir} && helm dependency build ${local.airflow_helm_local_chart}"
   }
 }
 
-resource "kubernetes_config_map" "airflow__secrets_backend_kwargs_config_map" {
-  metadata {
-    name = "airflow-secrets-backend-kwargs"
-    namespace = local.airflow_namespace
-  }
-  data = {
-    "airflow-secrets-backend-kwargs" = "{\"connections_prefix\":\"airflow-connections\",\"vault_url\":\"${module.keyvault.uri}\"}"
-  }
-  depends_on = [kubernetes_namespace.airflow_namespace]
-}
 
 
 resource "helm_release" "airflow" {
   name  ="airflow"
   namespace = local.airflow_namespace
+
   chart = local.airflow_helm_local_chart
   values = [local_file.airflow_helm_values.content]
-  depends_on = [kubectl_manifest.secret-osdu-az-principal,
-                kubectl_manifest.configmap-airflow-remote-log,
-                kubectl_manifest.dag-sync-secret,
-                kubectl_manifest.airflow-secret,
-                kubernetes_config_map.airflow__secrets_backend_kwargs_config_map,
+  timeout = 600
+  depends_on = [kubectl_manifest.configmap_airflow_remote_log,
+                module.redis,
+                module.postgresql,
+                kubectl_manifest.secret_provider_class_airflow,
+                kubernetes_service.appinsights_statsd,
                 null_resource.helm_local_cache]
 }
 
@@ -656,7 +650,12 @@ resource "helm_release" "traefik" {
   name  ="traefik"
   repository = "https://kubernetes-charts.storage.googleapis.com"
   namespace  = "traefik"
+<<<<<<< HEAD
   chart ="traefik"
+=======
+  create_namespace = true
+  chart ="stable/traefik"
+>>>>>>> 0a1a34490242f7e78339e465d723e1fd78a8952e
   set {
     name  = "kubernetes.ingressClass"
     value = "traefik"
@@ -666,15 +665,15 @@ resource "helm_release" "traefik" {
     value = "true"
   }
   set {
-    name  = "rbac.enable"
+    name  = "rbac.enabled"
     value = "true"
   }
   depends_on = [module.aks]
 }
 
-#-------------------------------
+# -------------------------------
 # create namespace for airflow
-#-------------------------------
+# -------------------------------
 resource "kubernetes_namespace" "airflow_namespace" {
   metadata{
     name  = local.airflow_namespace
@@ -682,34 +681,47 @@ resource "kubernetes_namespace" "airflow_namespace" {
   depends_on = [module.aks]
 }
 
-resource "kubernetes_config_map" "appinsights_config_map" {
+
+
+# -------------------------------
+# deploy appinsights-statsd 
+# -------------------------------
+
+resource "local_file" "appinsights_statsd_yaml" {
+  filename = local.appinsights_statsd_yaml
+  content = templatefile(local.appinsights_statsd_template_yaml,
+              {
+                identity_name = local.user_assigned_identity_name
+                airflow_namespace   = local.airflow_namespace
+              }
+            )  
+}
+resource "kubectl_manifest" "appinsights_statsd" {
+  yaml_body = local_file.appinsights_statsd_yaml.content
+  depends_on = [helm_release.csi-secrets-store-provider-azure,
+                kubectl_manifest.secret_provider_class_appinsights_statsd,
+                kubernetes_namespace.airflow_namespace,
+                module.keyvault_secret]
+}
+
+resource "kubernetes_service" "appinsights_statsd" {
   metadata {
-    name = "appinsights-config"
+    name = "appinsights-statsd-svc"
     namespace = local.airflow_namespace
   }
-  data = {
-    "appinsightsconfig.js" = local_file.appinsights_statsd_config.content
+  spec {
+    selector = {
+      "app" = "appinsights-statsd"
+    }
+    port {
+      protocol = "UDP"
+      port = 8125
+    }
+    type = "ClusterIP"
   }
-  depends_on = [kubernetes_namespace.airflow_namespace]
+  depends_on = [kubectl_manifest.appinsights_statsd]
 }
 
-
-
-
-
-#-------------------------------
-# appinsights statsd Kubernetes deployment
-#-------------------------------
-
-resource "local_file" "appinsights_statsd_config" {
-  filename = local.appinsights_statsd_config_js
-  content  = templatefile(local.appinsights_statsd_config_template_js,
-               {
-                  airflow_instance_name = local.airflow_instance_name
-                  appinsights_key       = module.appinsights.instrumentation_key
-               }
-            )
-}
 #-------------------------------
 # Output Variables  (output.tf)
 #-------------------------------
@@ -764,7 +776,3 @@ output "user_assigned_identity_principal_id" {
 output "kubeconfig" {
   value = module.aks.kube_config_path
 }
-
-# output "aks_node_resource_group" {
-#   value = module.aks.node_resource_group
-# }

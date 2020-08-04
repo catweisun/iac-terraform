@@ -40,6 +40,5 @@ resource "azurerm_postgresql_firewall_rule" "enable_azure_service_access" {
   resource_group_name = data.azurerm_resource_group.main.name
   server_name         = azurerm_postgresql_server.main.name
   start_ip_address    = "0.0.0.0"
-  end_ip_address      = "0.0.0.0"
-
+  end_ip_address      = "255.255.255.255"
 }
