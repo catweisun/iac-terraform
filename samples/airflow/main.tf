@@ -641,6 +641,7 @@ resource "helm_release" "airflow" {
   depends_on = [kubectl_manifest.configmap_airflow_remote_log,
                 module.redis,
                 module.postgresql,
+                kubernetes_namespace.airflow_namespace,
                 kubectl_manifest.secret_provider_class_airflow,
                 kubernetes_service.appinsights_statsd,
                 null_resource.helm_local_cache]
@@ -715,7 +716,7 @@ resource "kubernetes_service" "appinsights_statsd" {
     }
     type = "ClusterIP"
   }
-  depends_on = [kubectl_manifest.appinsights_statsd]
+  depends_on = [kubernetes_namespace.airflow_namespace,kubectl_manifest.appinsights_statsd]
 }
 
 #-------------------------------
