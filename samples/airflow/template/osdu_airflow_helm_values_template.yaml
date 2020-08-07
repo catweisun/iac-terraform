@@ -492,7 +492,7 @@ web:
   ## NOTE:
   ## - should be compatible with `ingress.web.path` config
   ##
-  baseUrl: "http://localhost/${airflow_public_host_path}"
+  baseUrl: "http://localhost${airflow_public_host_path}"
 
   ## sets `AIRFLOW__CORE__STORE_SERIALIZED_DAGS`
   ##
